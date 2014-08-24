@@ -70,7 +70,8 @@ __after_proc_init:
 	 */
 #ifdef CONFIG_ALIGNMENT_TRAP
 	orr	r0, r0, #CR_A
-#else
+#endif
+#ifdef CONFIG_ALLOW_CPU_ALIGNMENT
 	bic	r0, r0, #CR_A
 #endif
 #ifdef CONFIG_CPU_DCACHE_DISABLE

@@ -947,6 +947,25 @@ config CC_OPTIMIZE_FOR_SIZE
 
 	  If unsure, say Y.
 
+config ARCH_SUPPORTS_OPTIMIZED_INLINING
+	bool
+	default n
+
+config OPTIMIZE_INLINING
+	bool "Allow gcc to uninline functions marked 'inline'"
+	depends on ARCH_SUPPORTS_OPTIMIZED_INLINING
+	---help---
+	  This option determines if the kernel forces gcc to inline the
+	  functions developers have marked 'inline'. Doing so takes away
+	  freedom from gcc to do what it thinks is best, which is desirable for
+	  the gcc 3.x series of compilers. The gcc 4.x series have a rewritten
+	  inlining algorithm and enabling this option will generate a smaller
+	  kernel there. Hopefully this algorithm is so good that allowing gcc
+	  4.x and above to make the decision will become the default in the
+	  future. Until then this option is there to test gcc for this.
+
+	  If unsure, say N.
+
 config SYSCTL
 	bool
 
@@ -1380,6 +1399,15 @@ if MODULES
 
 config MODULE_FORCE_LOAD
 	bool "Forced module loading"
+	default n
+	help
+	  Allow loading of modules without version information (ie. modprobe
+	  --force).  Forced module loading sets the 'F' (forced) taint flag and
+	  is usually a really bad idea.
+
+config MODULE_FORCE_LOAD_ATH6KL
+	bool "Forced module loading"
+	depends on ARCH_MSM8625 && ARCH_MSM7X27A
 	default n
 	help
 	  Allow loading of modules without version information (ie. modprobe

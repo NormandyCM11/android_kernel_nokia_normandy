@@ -15,7 +15,11 @@
  * this needs to be before <linux/kernel.h> is loaded,
  * and <linux/sched.h> loads <linux/kernel.h>
  */
+#ifdef CONFIG_BATTERY_MSM_DEBUG
 #define DEBUG 1
+#else
+#define DEBUG 0
+#endif
 
 #include <linux/slab.h>
 #include <linux/earlysuspend.h>
@@ -36,6 +40,9 @@
 #ifdef CONFIG_MSM_SM_EVENT
 #include <linux/sm_event_log.h>
 #include <linux/sm_event.h>
+#endif
+#ifdef CONFIG_FORCE_FAST_CHARGE
+#include <linux/fastchg.h>
 #endif
 
 #define	BATTERY_RPC_PROG		0x30000089
@@ -163,9 +170,21 @@ static int msm_charger_psy_get_property(struct power_supply *psy,
 				? 1 : 0;
 			break;
 		case POWER_SUPPLY_TYPE_USB:
+#ifdef CONFIG_FORCE_FAST_CHARGE
+		if (force_fast_charge == 1) {
+			val->intval = msm_battery_info.current_charger_src & AC_CHG
+				? 1 : 0;
+			break;
+		} else {
 			val->intval = msm_battery_info.current_charger_src & USB_CHG
 				? 1 : 0;
 			break;
+		}
+#else
+		val->intval = msm_battery_info.current_charger_src & USB_CHG
+			? 1 : 0;
+		break;
+#endif
 		case POWER_SUPPLY_TYPE_UNKNOWN:
 			val->intval = msm_battery_info.current_charger_src & UNKNOWN_CHG
 				? 1 : 0;
@@ -337,10 +356,24 @@ static void update_charger_type(u32 charger_hardware)
 {
 	switch(charger_hardware) {
 	case CHARGER_TYPE_USB_PC:
+#ifdef CONFIG_FORCE_FAST_CHARGE
+	if (force_fast_charge == 1) {
+		pr_debug("BATT: usb pc charger inserted and masked as usb wall charger\n");
+
+		msm_battery_info.current_psy = &msm_psy_ac;
+		msm_battery_info.current_charger_src = AC_CHG;
+	} else {
 		pr_debug("BATT: usb pc charger inserted\n");
 
 		msm_battery_info.current_psy = &msm_psy_usb;
 		msm_battery_info.current_charger_src = USB_CHG;
+	}
+#else
+		pr_debug("BATT: usb pc charger inserted\n");
+
+		msm_battery_info.current_psy = &msm_psy_usb;
+		msm_battery_info.current_charger_src = USB_CHG;
+#endif
 		break;
 	case CHARGER_TYPE_USB_WALL:
 		pr_debug("BATT: usb wall charger inserted\n");
