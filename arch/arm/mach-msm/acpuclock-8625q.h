@@ -27,3 +27,4 @@ struct acpuclk_pdata_8625q {
 };
 
 #endif /* __ARCH_ARM_MACH_MSM_ACPUCLOCK_8625Q_H */
+

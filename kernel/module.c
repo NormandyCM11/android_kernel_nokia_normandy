@@ -1104,7 +1104,7 @@ static unsigned long maybe_relocated(unsigned long crc,
 static int check_version(Elf_Shdr *sechdrs,
 			 unsigned int versindex,
 			 const char *symname,
-			 struct module *mod, 
+			 struct module *mod,
 			 const unsigned long *crc,
 			 const struct module *crc_owner)
 {
@@ -1173,7 +1173,7 @@ static inline int same_magic(const char *amagic, const char *bmagic,
 static inline int check_version(Elf_Shdr *sechdrs,
 				unsigned int versindex,
 				const char *symname,
-				struct module *mod, 
+				struct module *mod,
 				const unsigned long *crc,
 				const struct module *crc_owner)
 {
@@ -1904,6 +1904,13 @@ static int simplify_symbols(struct module *mod, const struct load_info *info)
 
 		switch (sym[i].st_shndx) {
 		case SHN_COMMON:
+			/* Ignore common symbols */
+			if (!strncmp(name, "__gnu_lto", 9)) {
+				pr_info("%s: module not link time optimized\n",
+					mod->name);
+			break;
+			}
+
 			/* We compiled with -fno-common.  These are not
 			   supposed to happen.  */
 			pr_debug("Common symbol: %s\n", name);
@@ -2550,6 +2557,15 @@ static int check_modinfo(struct module *mod, struct load_info *info)
 	const char *modmagic = get_modinfo(info, "vermagic");
 	int err;
 
+#ifdef CONFIG_MODULE_FORCE_LOAD_ATH6KL
+	if (strcmp(mod->name, "wlan") == 0 || strcmp(mod->name, "cfg80211") == 0) {
+		printk(KERN_ERR "%s: version magic check got skipped\n", mod->name);
+		printk(KERN_ERR "%s: version magic '%s' was expected to be '%s'\n",
+		       mod->name, modmagic, vermagic);
+		goto skip_vermagic_check;
+	}
+#endif /* CONFIG_MODULE_FORCE_LOAD_ATH6KL */
+
 	/* This is allowed: modprobe --force will invalidate it. */
 	if (!modmagic) {
 		err = try_to_force_load(mod, "bad vermagic");
@@ -2560,6 +2576,10 @@ static int check_modinfo(struct module *mod, struct load_info *info)
 		       mod->name, modmagic, vermagic);
 		return -ENOEXEC;
 	}
+
+#ifdef CONFIG_MODULE_FORCE_LOAD_ATH6KL
+skip_vermagic_check:
+#endif /* CONFIG_MODULE_FORCE_LOAD_ATH6KL */
 
 	if (!get_modinfo(info, "intree"))
 		add_taint_module(mod, TAINT_OOT_MODULE);
@@ -2950,6 +2970,9 @@ static struct module *load_module(void __user *umod,
 
 	/* This has to be done once we're sure module name is unique. */
 	dynamic_debug_setup(info.debug, info.num_debug);
+
+	/* Ftrace init must be called in the MODULE_STATE_UNFORMED state */
+	ftrace_module_init(mod);
 
 	/* Find duplicate symbols */
 	err = verify_export_symbols(mod);

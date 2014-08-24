@@ -295,6 +295,13 @@ config BATTERY_MSM
 	help
 	  Say Y to enable support for the battery in Qualcomm MSM.
 
+config BATTERY_MSM_DEBUG
+	bool "MSM battery"
+	depends on BATTERY_MSM
+	default n
+	help
+	  Say Y to enable support for debugging the battery in Qualcomm MSM.
+
 config BATTERY_MSM8X60
 	tristate "MSM8X60 battery"
 	select PMIC8XXX_BATTALARM
@@ -441,4 +448,13 @@ config AB8500_BATTERY_THERM_ON_BATCTRL
 	help
 	  Say Y to enable battery temperature measurements using
 	  thermistor connected on BATCTRL ADC.
+
+config FORCE_FAST_CHARGE
+	depends on BATTERY_MSM && ARCH_MSM8625 && ARCH_MSM7X27A
+	bool "Force AC charge mode at will"
+	default n
+	help
+	  A simple sysfs interface to force adapters that
+	  are detected as USB to charge as AC.
+
 endif # POWER_SUPPLY

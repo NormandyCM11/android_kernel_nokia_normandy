@@ -98,7 +98,7 @@ static inline int zcache_comp_op(enum comp_op op,
 				u8 *dst, unsigned int *dlen)
 {
 	struct crypto_comp *tfm;
-	int ret;
+	int ret = 0;
 
 	BUG_ON(!zcache_comp_pcpu_tfms);
 	tfm = *per_cpu_ptr(zcache_comp_pcpu_tfms, get_cpu());
@@ -704,19 +704,19 @@ static struct zv_hdr *zv_create(struct zs_pool *pool, uint32_t pool_id,
 
 	BUG_ON(!irqs_disabled());
 	BUG_ON(chunks >= NCHUNKS);
-	handle = zs_malloc(pool, size);
+	handle = (void *)zs_malloc(pool, size);
 	if (!handle)
 		goto out;
 	atomic_inc(&zv_curr_dist_counts[chunks]);
 	atomic_inc(&zv_cumul_dist_counts[chunks]);
-	zv = zs_map_object(pool, handle);
+	zv = zs_map_object(pool, (unsigned long)handle, ZS_MM_RW);
 	zv->index = index;
 	zv->oid = *oid;
 	zv->pool_id = pool_id;
 	zv->size = clen;
 	SET_SENTINEL(zv, ZVH);
 	memcpy((char *)zv + sizeof(struct zv_hdr), cdata, clen);
-	zs_unmap_object(pool, handle);
+	zs_unmap_object(pool, (unsigned long)handle);
 out:
 	return handle;
 }
@@ -728,18 +728,18 @@ static void zv_free(struct zs_pool *pool, void *handle)
 	uint16_t size;
 	int chunks;
 
-	zv = zs_map_object(pool, handle);
+	zv = zs_map_object(pool, (unsigned long)handle, ZS_MM_RW);
 	ASSERT_SENTINEL(zv, ZVH);
 	size = zv->size + sizeof(struct zv_hdr);
 	INVERT_SENTINEL(zv, ZVH);
-	zs_unmap_object(pool, handle);
+	zs_unmap_object(pool, (unsigned long)handle);
 
 	chunks = (size + (CHUNK_SIZE - 1)) >> CHUNK_SHIFT;
 	BUG_ON(chunks >= NCHUNKS);
 	atomic_dec(&zv_curr_dist_counts[chunks]);
 
 	local_irq_save(flags);
-	zs_free(pool, handle);
+	zs_free(pool, (unsigned long)handle);
 	local_irq_restore(flags);
 }
 
@@ -750,14 +750,14 @@ static void zv_decompress(struct page *page, void *handle)
 	int ret;
 	struct zv_hdr *zv;
 
-	zv = zs_map_object(zcache_host.zspool, handle);
+	zv = zs_map_object(zcache_host.zspool, (unsigned long)handle, ZS_MM_RW);
 	BUG_ON(zv->size == 0);
 	ASSERT_SENTINEL(zv, ZVH);
 	to_va = kmap_atomic(page);
 	ret = zcache_comp_op(ZCACHE_COMPOP_DECOMPRESS, (char *)zv + sizeof(*zv),
 				zv->size, to_va, &clen);
 	kunmap_atomic(to_va);
-	zs_unmap_object(zcache_host.zspool, handle);
+	zs_unmap_object(zcache_host.zspool, (unsigned long)handle);
 	BUG_ON(ret);
 	BUG_ON(clen != PAGE_SIZE);
 }
@@ -1817,9 +1817,9 @@ static struct cleancache_ops zcache_cleancache_ops = {
 	.init_fs = zcache_cleancache_init_fs
 };
 
-struct cleancache_ops zcache_cleancache_register_ops(void)
+struct cleancache_ops *zcache_cleancache_register_ops(void)
 {
-	struct cleancache_ops old_ops =
+	struct cleancache_ops *old_ops =
 		cleancache_register_ops(&zcache_cleancache_ops);
 
 	return old_ops;
@@ -2054,14 +2054,14 @@ static int __init zcache_init(void)
 #endif
 #ifdef CONFIG_CLEANCACHE
 	if (zcache_enabled && use_cleancache) {
-		struct cleancache_ops old_ops;
+		struct cleancache_ops *old_ops;
 
 		zbud_init();
 		register_shrinker(&zcache_shrinker);
 		old_ops = zcache_cleancache_register_ops();
 		pr_info("zcache: cleancache enabled using kernel "
 			"transcendent memory and compression buddies\n");
-		if (old_ops.init_fs != NULL)
+		if (old_ops != NULL)
 			pr_warning("zcache: cleancache_ops overridden");
 	}
 #endif

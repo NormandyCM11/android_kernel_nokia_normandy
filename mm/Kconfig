@@ -380,15 +380,24 @@ config CLEANCACHE
 
 	  If unsure, say Y to enable cleancache
 
+config DYNAMIC_PAGE_WRITEBACK
+	bool "Dynamically manage the dirty page writebacks during suspend/resume"
+	default n
+	help
+	  This feature allows to use different dirty page writeback intervals
+	  when the system is suspended and when the system has been resumed.
+
+	  If unsure, say N to disable this feature
+
 config MEMORY_HOLE_CARVEOUT
-        bool
-        help
-          MEMORY_HOLE_CARVEOUT is needed to include the msm_mem_hole driver
-          which is needed to enable/disable memblock-remove features for
-          device tree nodes that set compatible="qcom,msm-mem-hole". The
-          corresponding device tree node provides the address and size of
-          the memory corresponding to the hole to be removed using memblock-
-          remove.
+	bool
+	help
+	  MEMORY_HOLE_CARVEOUT is needed to include the msm_mem_hole driver
+	  which is needed to enable/disable memblock-remove features for
+	  device tree nodes that set compatible="qcom,msm-mem-hole". The
+	  corresponding device tree node provides the address and size of
+	  the memory corresponding to the hole to be removed using memblock-
+	  remove.
 
 config USE_USER_ACCESSIBLE_TIMERS
 	bool "Enables timers accessible from userspace"
