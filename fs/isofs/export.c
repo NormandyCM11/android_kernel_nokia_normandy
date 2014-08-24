@@ -107,12 +107,11 @@ static struct dentry *isofs_export_get_parent(struct dentry *child)
 }
 
 static int
-isofs_export_encode_fh(struct dentry *dentry,
+isofs_export_encode_fh(struct inode *inode,
 		       __u32 *fh32,
 		       int *max_len,
-		       int connectable)
+		       struct inode *parent)
 {
-	struct inode * inode = dentry->d_inode;
 	struct iso_inode_info * ei = ISOFS_I(inode);
 	int len = *max_len;
 	int type = 1;
@@ -126,10 +125,10 @@ isofs_export_encode_fh(struct dentry *dentry,
 	 */
 	if (connectable && (len < 5)) {
 		*max_len = 5;
-		return 255;
+		return FILEID_INVALID;
 	} else if (len < 3) {
 		*max_len = 3;
-		return 255;
+		return FILEID_INVALID;
 	}
 
 	len = 3;

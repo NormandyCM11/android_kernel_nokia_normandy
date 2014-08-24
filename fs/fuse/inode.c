@@ -644,18 +644,16 @@ static struct dentry *fuse_get_dentry(struct super_block *sb,
 	return ERR_PTR(err);
 }
 
-static int fuse_encode_fh(struct dentry *dentry, u32 *fh, int *max_len,
-			   int connectable)
+static int fuse_encode_fh(struct inode *inode, u32 *fh, int *max_len,
+			   struct inode *parent)
 {
-	struct inode *inode = dentry->d_inode;
-	bool encode_parent = connectable && !S_ISDIR(inode->i_mode);
-	int len = encode_parent ? 6 : 3;
+	int len = parent ? 6 : 3;
 	u64 nodeid;
 	u32 generation;
 
 	if (*max_len < len) {
 		*max_len = len;
-		return  255;
+		return  FILEID_INVALID;
 	}
 
 	nodeid = get_fuse_inode(inode)->nodeid;
@@ -665,14 +663,9 @@ static int fuse_encode_fh(struct dentry *dentry, u32 *fh, int *max_len,
 	fh[1] = (u32)(nodeid & 0xffffffff);
 	fh[2] = generation;
 
-	if (encode_parent) {
-		struct inode *parent;
-
-		spin_lock(&dentry->d_lock);
-		parent = dentry->d_parent->d_inode;
+	if (parent) {
 		nodeid = get_fuse_inode(parent)->nodeid;
 		generation = parent->i_generation;
-		spin_unlock(&dentry->d_lock);
 
 		fh[3] = (u32)(nodeid >> 32);
 		fh[4] = (u32)(nodeid & 0xffffffff);
@@ -680,7 +673,7 @@ static int fuse_encode_fh(struct dentry *dentry, u32 *fh, int *max_len,
 	}
 
 	*max_len = len;
-	return encode_parent ? 0x82 : 0x81;
+	return parent ? 0x82 : 0x81;
 }
 
 static struct dentry *fuse_fh_to_dentry(struct super_block *sb,
@@ -894,7 +887,7 @@ static int fuse_bdi_init(struct fuse_conn *fc, struct super_block *sb)
 	int err;
 
 	fc->bdi.name = "fuse";
-	fc->bdi.ra_pages = (VM_MAX_READAHEAD * 1024) / PAGE_CACHE_SIZE;
+	fc->bdi.ra_pages = max_readahead_pages;
 	/* fuse does it's own writeback accounting */
 	fc->bdi.capabilities = BDI_CAP_NO_ACCT_WB;
 

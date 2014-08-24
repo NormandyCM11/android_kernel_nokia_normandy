@@ -34,7 +34,7 @@ config ARCH_MSM7X27
 	select MULTI_IRQ_HANDLER
 	select MSM_PROC_COMM_REGULATOR
 	select CLEANCACHE
-	select QCACHE
+	select ZCACHE
 	select MSM_PM2 if PM
 	select MSM_RUN_QUEUE_STATS if MSM_SOC_REV_A
 	select DONT_MAP_HOLE_AFTER_MEMBANK0
@@ -168,7 +168,7 @@ config ARCH_MSM8960
 	select ARCH_SPARSEMEM_ENABLE
 	select ARCH_HAS_HOLES_MEMORYMODEL
 	select CLEANCACHE
-	select QCACHE
+	select ZCACHE
 	select MSM_MULTIMEDIA_USE_ION
 	select MULTI_IRQ_HANDLER
 	select MSM_PM8X60 if PM
@@ -238,7 +238,7 @@ config ARCH_APQ8064
 	select CPU_HAS_L2_PMU
 	select HOLES_IN_ZONE if SPARSEMEM
 	select CLEANCACHE
-	select QCACHE
+	select ZCACHE
 	select MIGHT_HAVE_PCI
 	select ARCH_SUPPORTS_MSI
 	select ARM_HAS_SG_CHAIN
@@ -1363,7 +1363,7 @@ config MSM_RPC_SDIO_DEBUG
 	help
 	  Support for debugging SDIO XPRT
 
-config MSM_FUSE_INFO_DEBUG 
+config MSM_FUSE_INFO_DEBUG
 	default y
 	bool "MSM FUSE debug support"
 	help
@@ -1648,6 +1648,21 @@ config MSM_DALRPC_TEST
 	default m
 	help
 	  Exercises DAL RPC calls to QDSP6.
+
+config MSM_MPDEC
+	bool "Enable kernel based mpdecision"
+	depends on MSM_SMP
+	default n
+	help
+	  This enables kernel based multi core control.
+	  (up/down hotplug based on load)
+
+config MSM_MPDEC_INPUTBOOST_CPUMIN
+	bool "Enable kernel based mpdecision"
+	depends on MSM_MPDEC
+	default n
+	help
+	  This pushes the cpu min speed to predefined values on input events.
 
 if CPU_FREQ_MSM
 
@@ -2604,6 +2619,7 @@ config MSM_FIQ
 	  if apps is not responding and holding lock with irqs disabled.
 	  Modem will then generate an raise a FIQ on this line before sending
 	  SMSM reset
+
 config MSM_PBUS
 	bool "Enable PBUS handler for debugging"
 	depends on ARCH_MSM8625 || ARCH_MSM7X27A
@@ -2620,5 +2636,13 @@ config MSM_USE_USER_ACCESSIBLE_TIMERS
 	help
 	  Enables MSM-specific user accessible timers via a shared
 	  memory page containing the cycle counter.
+
+config MSM_OVERCLOCK_GPU
+	bool "Enables overclocking of adreno 203 gpu."
+	depends on ARCH_MSM8625 && ARCH_MSM7X27A
+	default n
+	help
+	  Enables overclocking of adreno 203 gpu. This is rather dangerous.
+	  If unsure, say N.
 
 endif
